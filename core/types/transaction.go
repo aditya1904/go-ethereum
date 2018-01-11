@@ -47,18 +47,19 @@ func deriveSigner(V *big.Int) Signer {
 }
 
 type Transaction struct {
-	data txdata  //txdata struct defined below
+	data txdata //txdata struct defined below
 	// caches
 	hash atomic.Value //meaning of atomic.Value https://golang.org/pkg/sync/atomic/#Value
 	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
-	from atomic.Value
+	from atomic.Value // sarda : seems to be the place where we add our counter field. look at EncodeRLP function, there tx.data is used for encoding.
+	// hence the counter field should not be added in txdata
 }
 
 type txdata struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`  // a count of the number of transactions sent by the sender
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`  // the number of Wei that the sender is willing to pay per unit of gas required to execute the transaction.
-	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`  // the maximum amount of gas that the sender is willing to pay for executing this transaction. This amount is set and paid upfront, before any computation is done.
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation // the address of the Recipient
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"` // a count of the number of transactions sent by the sender
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"` // the number of Wei that the sender is willing to pay per unit of gas required to execute the transaction.
+	GasLimit     *big.Int        `json:"gas"      gencodec:"required"` // the maximum amount of gas that the sender is willing to pay for executing this transaction. This amount is set and paid upfront, before any computation is done.
+	Recipient    *common.Address `json:"to"       rlp:"nil"`           // nil means contract creation // the address of the Recipient
 	Amount       *big.Int        `json:"value"    gencodec:"required"` // the amount of Wei to be transferred.
 	Payload      []byte          `json:"input"    gencodec:"required"` // data: String - (optional) Either a byte string containing the associated data of the message, or in the case of a contract-creation transaction, the initialisation code.
 
@@ -71,7 +72,7 @@ type txdata struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct {  // ? /
+type txdataMarshaling struct { // ? /
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
@@ -81,6 +82,7 @@ type txdataMarshaling struct {  // ? /
 	R            *hexutil.Big
 	S            *hexutil.Big
 }
+
 //Wrapper functions
 func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
@@ -120,7 +122,7 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
-func (tx *Transaction) ChainId() *big.Int {  // this answer explains : https://ethereum.stackexchange.com/a/25820/19789
+func (tx *Transaction) ChainId() *big.Int { // this answer explains : https://ethereum.stackexchange.com/a/25820/19789
 	return deriveChainId(tx.data.V)
 }
 
