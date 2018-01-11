@@ -131,6 +131,18 @@ func (tx *Transaction) Protected() bool {
 	return isProtectedV(tx.data.V)
 }
 
+// *****
+// add a function here to give the transaction's node counter
+// *****
+
+/*
+
+func (tx *Transaction)giveNodeCount() uint16{
+	return tx.data.nc
+}
+
+*/
+
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
 		v := V.Uint64()
