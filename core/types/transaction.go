@@ -47,50 +47,51 @@ func deriveSigner(V *big.Int) Signer {
 }
 
 type Transaction struct {
-	data txdata
+	data txdata  //txdata struct defined below
 	// caches
-	hash atomic.Value
-	size atomic.Value
+	hash atomic.Value //meaning of atomic.Value https://golang.org/pkg/sync/atomic/#Value
+	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
 	from atomic.Value
 }
 
 type txdata struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
-	GasLimit     uint64          `json:"gas"      gencodec:"required"`
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
-	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`  // a count of the number of transactions sent by the sender
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`  // the number of Wei that the sender is willing to pay per unit of gas required to execute the transaction.
+	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`  // the maximum amount of gas that the sender is willing to pay for executing this transaction. This amount is set and paid upfront, before any computation is done.
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation // the address of the Recipient
+	Amount       *big.Int        `json:"value"    gencodec:"required"` // the amount of Wei to be transferred.
+	Payload      []byte          `json:"input"    gencodec:"required"` // data: String - (optional) Either a byte string containing the associated data of the message, or in the case of a contract-creation transaction, the initialisation code.
 
-	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
+	// Signature values // used to generate the signature that identifies the sender of the transaction
+	V *big.Int `json:"v" gencodec:"required"` // V is the recoveryid. Can be used to get public key of the sender. -> https://ethereum.stackexchange.com/a/13892/19789
+	R *big.Int `json:"r" gencodec:"required"` // R and S are the outputs of the ECDSA Signatures
 	S *big.Int `json:"s" gencodec:"required"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct {
+type txdataMarshaling struct {  // ? /
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
-	GasLimit     hexutil.Uint64
+	GasLimit     *hexutil.Big
 	Amount       *hexutil.Big
 	Payload      hexutil.Bytes
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
 }
-
-func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+//Wrapper functions
+func NewTransaction(nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
 }
 
-func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+// new transaction function
+func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, data []byte) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
@@ -99,7 +100,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		Recipient:    to,
 		Payload:      data,
 		Amount:       new(big.Int),
-		GasLimit:     gasLimit,
+		GasLimit:     new(big.Int),
 		Price:        new(big.Int),
 		V:            new(big.Int),
 		R:            new(big.Int),
@@ -107,6 +108,9 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
 	}
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
@@ -116,7 +120,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
-func (tx *Transaction) ChainId() *big.Int {
+func (tx *Transaction) ChainId() *big.Int {  // this answer explains : https://ethereum.stackexchange.com/a/25820/19789
 	return deriveChainId(tx.data.V)
 }
 
@@ -150,7 +154,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
-// MarshalJSON encodes the web3 RPC transaction format.
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
@@ -166,8 +169,8 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	}
 	var V byte
 	if isProtectedV(dec.V) {
-		chainID := deriveChainId(dec.V).Uint64()
-		V = byte(dec.V.Uint64() - 35 - 2*chainID)
+		chainId := deriveChainId(dec.V).Uint64()
+		V = byte(dec.V.Uint64() - 35 - 2*chainId)
 	} else {
 		V = byte(dec.V.Uint64() - 27)
 	}
@@ -179,7 +182,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Gas() uint64        { return tx.data.GasLimit }
+func (tx *Transaction) Gas() *big.Int      { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
@@ -190,9 +193,10 @@ func (tx *Transaction) CheckNonce() bool   { return true }
 func (tx *Transaction) To() *common.Address {
 	if tx.data.Recipient == nil {
 		return nil
+	} else {
+		to := *tx.data.Recipient
+		return &to
 	}
-	to := *tx.data.Recipient
-	return &to
 }
 
 // Hash hashes the RLP encoding of tx.
@@ -224,8 +228,8 @@ func (tx *Transaction) Size() common.StorageSize {
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
 		nonce:      tx.data.AccountNonce,
-		gasLimit:   tx.data.GasLimit,
-		gasPrice:   new(big.Int).Set(tx.data.Price),
+		price:      new(big.Int).Set(tx.data.Price),
+		gasLimit:   new(big.Int).Set(tx.data.GasLimit),
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
@@ -251,7 +255,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	total := new(big.Int).Mul(tx.data.Price, tx.data.GasLimit)
 	total.Add(total, tx.data.Amount)
 	return total
 }
@@ -312,22 +316,22 @@ func (tx *Transaction) String() string {
 	)
 }
 
-// Transactions is a Transaction slice type for basic sorting.
+// Transaction slice type for basic sorting.
 type Transactions []*Transaction
 
-// Len returns the length of s.
+// Len returns the length of s
 func (s Transactions) Len() int { return len(s) }
 
-// Swap swaps the i'th and the j'th element in s.
+// Swap swaps the i'th and the j'th element in s
 func (s Transactions) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-// GetRlp implements Rlpable and returns the i'th element of s in rlp.
+// GetRlp implements Rlpable and returns the i'th element of s in rlp
 func (s Transactions) GetRlp(i int) []byte {
 	enc, _ := rlp.EncodeToBytes(s[i])
 	return enc
 }
 
-// TxDifference returns a new set t which is the difference between a to b.
+// Returns a new set t which is the difference between a to b
 func TxDifference(a, b Transactions) (keep Transactions) {
 	keep = make(Transactions, 0, len(a))
 
@@ -375,7 +379,7 @@ func (s *TxByPrice) Pop() interface{} {
 }
 
 // TransactionsByPriceAndNonce represents a set of transactions that can return
-// transactions in a profit-maximizing sorted order, while supporting removing
+// transactions in a profit-maximising sorted order, while supporting removing
 // entire batches of transactions for non-executable accounts.
 type TransactionsByPriceAndNonce struct {
 	txs    map[common.Address]Transactions // Per account nonce-sorted list of transactions
@@ -437,24 +441,22 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	to         *common.Address
-	from       common.Address
-	nonce      uint64
-	amount     *big.Int
-	gasLimit   uint64
-	gasPrice   *big.Int
-	data       []byte
-	checkNonce bool
+	to                      *common.Address
+	from                    common.Address
+	nonce                   uint64
+	amount, price, gasLimit *big.Int
+	data                    []byte
+	checkNonce              bool
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, checkNonce bool) Message {
 	return Message{
 		from:       from,
 		to:         to,
 		nonce:      nonce,
 		amount:     amount,
+		price:      price,
 		gasLimit:   gasLimit,
-		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
 	}
@@ -462,9 +464,9 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 
 func (m Message) From() common.Address { return m.from }
 func (m Message) To() *common.Address  { return m.to }
-func (m Message) GasPrice() *big.Int   { return m.gasPrice }
+func (m Message) GasPrice() *big.Int   { return m.price }
 func (m Message) Value() *big.Int      { return m.amount }
-func (m Message) Gas() uint64          { return m.gasLimit }
+func (m Message) Gas() *big.Int        { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
