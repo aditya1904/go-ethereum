@@ -72,7 +72,7 @@ type txdata struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct { // ? /
+type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.   
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
@@ -153,12 +153,12 @@ func isProtectedV(V *big.Int) bool {
 }
 
 // EncodeRLP implements rlp.Encoder
-func (tx *Transaction) EncodeRLP(w io.Writer) error {
+func (tx *Transaction) EncodeRLP(w io.Writer) error {  // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
 	return rlp.Encode(w, &tx.data)
 }
 
 // DecodeRLP implements rlp.Decoder
-func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
+func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {      // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
 	_, size, _ := s.Kind()
 	err := s.Decode(&tx.data)
 	if err == nil {
