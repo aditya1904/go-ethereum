@@ -72,7 +72,7 @@ type txdata struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.   
+type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
@@ -219,7 +219,7 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)
+	v := rlpHash(tx)										// initially, calculates keccak256 hash then perform RLP encoding on that hash
 	tx.hash.Store(v)
 	return v
 }
@@ -251,7 +251,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	}
 
 	var err error
-	msg.from, err = Sender(s, tx)
+	msg.from, err = Sender(s, tx)        //here it derives sender's address from cached singnature(V,R,S)
 	return msg, err
 }
 
