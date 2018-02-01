@@ -53,12 +53,13 @@ type Transaction struct {
 	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
 	from atomic.Value // sarda : seems to be the place where we add our counter field. look at EncodeRLP function, there tx.data is used for encoding.
 	// hence the counter field should not be added in txdata
+	nc uint16
 }
 
 type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"` // a count of the number of transactions sent by the sender
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"` // the number of Wei that the sender is willing to pay per unit of gas required to execute the transaction.
-	GasLimit     uint64        `json:"gas"      gencodec:"required"` // the maximum amount of gas that the sender is willing to pay for executing this transaction. This amount is set and paid upfront, before any computation is done.
+	GasLimit     uint64          `json:"gas"      gencodec:"required"` // the maximum amount of gas that the sender is willing to pay for executing this transaction. This amount is set and paid upfront, before any computation is done.
 	Recipient    *common.Address `json:"to"       rlp:"nil"`           // nil means contract creation // the address of the Recipient
 	Amount       *big.Int        `json:"value"    gencodec:"required"` // the amount of Wei to be transferred.
 	Payload      []byte          `json:"input"    gencodec:"required"` // data: String - (optional) Either a byte string containing the associated data of the message, or in the case of a contract-creation transaction, the initialisation code.
@@ -115,7 +116,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		d.Price.Set(gasPrice)
 	}
 
-	return &Transaction{data: d}
+	return &Transaction{data: d, nc: 3}
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
@@ -132,13 +133,9 @@ func (tx *Transaction) Protected() bool {
 // add a function here to give the transaction's node counter
 // *****
 
-/*
-
-func (tx *Transaction)giveNodeCount() uint16{
-	return tx.data.nc
+func (tx *Transaction) giveNodeCount() uint16 {
+	return tx.nc
 }
-
-*/
 
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
@@ -150,12 +147,12 @@ func isProtectedV(V *big.Int) bool {
 }
 
 // EncodeRLP implements rlp.Encoder
-func (tx *Transaction) EncodeRLP(w io.Writer) error {  // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
+func (tx *Transaction) EncodeRLP(w io.Writer) error { // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
 	return rlp.Encode(w, &tx.data)
 }
 
 // DecodeRLP implements rlp.Decoder
-func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {      // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
+func (tx *Transaction) DecodeRLP(s *rlp.Stream) error { // RLP Encoding & Decoding: https://github.com/ethereum/wiki/wiki/RLP
 	_, size, _ := s.Kind()
 	err := s.Decode(&tx.data)
 	if err == nil {
@@ -216,7 +213,7 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)										// initially, calculates keccak256 hash then perform RLP encoding on that hash
+	v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
 	tx.hash.Store(v)
 	return v
 }
@@ -482,4 +479,4 @@ func (m Message) Value() *big.Int      { return m.amount }
 func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
-func (m Message) CheckNonce() bool { return m.checkNonce }
+func (m Message) CheckNonce() bool     { return m.checkNonce }

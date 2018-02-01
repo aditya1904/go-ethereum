@@ -133,10 +133,12 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // SendTransactions sends transactions to the peer and includes the hashes
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
-	for _, tx := range txs {
+	var temp_tx_list = make(types.Transaction, len(txs))
+	copy(temp_tx_list, txs)
+	for _, tx := range temp_tx_list {
 		p.knownTxs.Add(tx.Hash())
 	}
-	return p2p.Send(p.rw, TxMsg, txs)
+	return p2p.Send(p.rw, TxMsg, temp_tx_list)
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through
