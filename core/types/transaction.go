@@ -133,8 +133,19 @@ func (tx *Transaction) Protected() bool {
 // add a function here to give the transaction's node counter
 // *****
 
-func (tx *Transaction) giveNodeCount() uint16 {
-	return tx.nc
+func (tx *Transaction) CheckNodeCount() bool {
+	if tx.nc > 0 {
+		return true
+	}
+	return false
+}
+
+func (tx *Transaction) DecrementNodeCount() bool {
+	if tx.nc <= 0 {
+		return false
+	}
+	tx.nc -= 1
+	return true
 }
 
 func isProtectedV(V *big.Int) bool {

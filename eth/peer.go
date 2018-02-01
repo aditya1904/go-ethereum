@@ -134,9 +134,12 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 // in its transaction hash set for future reference.
 func (p *peer) SendTransactions(txs types.Transactions) error {
 	var temp_tx_list = make(types.Transactions, len(txs))
-	copy(temp_tx_list, txs)
-	for _, tx := range temp_tx_list {
-		p.knownTxs.Add(tx.Hash())
+	for _, tx := range txs {
+		if tx.CheckNodeCount() {
+			p.knownTxs.Add(tx.Hash())
+			tx.DecrementNodeCount()
+		//	temp_tx_list.append(tx)
+		}
 	}
 	return p2p.Send(p.rw, TxMsg, temp_tx_list)
 }
