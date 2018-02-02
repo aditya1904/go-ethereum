@@ -224,7 +224,13 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
+	//v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
+  v := rlpHash([]interface{}{
+		tx.data,
+		tx.hash,
+		tx.from,
+		tx.size,
+	})
 	tx.hash.Store(v)
 	return v
 }
