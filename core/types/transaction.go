@@ -46,6 +46,13 @@ func deriveSigner(V *big.Int) Signer {
 	}
 }
 
+type Transaction_For_Hash struct {
+	data txdata
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+} // malu : creating new struct for txhash
+
 type Transaction struct {
 	data txdata //txdata struct defined below
 	// caches
@@ -224,13 +231,9 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
+	tx_for_hash :=  Transaction_For_Hash{data: tx.data, hash: tx.hash, from: tx.from, size: tx.size}
 	//v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
-  v := rlpHash([]interface{}{
-		tx.data,
-		tx.hash,
-		tx.from,
-		tx.size,
-	})
+  	v := rlpHash(tx_for_hash)
 	tx.hash.Store(v)
 	return v
 }
@@ -324,6 +327,7 @@ func (tx *Transaction) String() string {
 	R:        %#x
 	S:        %#x
 	Hex:      %x
+	NC:       %#v
 `,
 		tx.Hash(),
 		tx.data.Recipient == nil,
@@ -338,6 +342,7 @@ func (tx *Transaction) String() string {
 		tx.data.R,
 		tx.data.S,
 		enc,
+		nc,
 	)
 }
 
