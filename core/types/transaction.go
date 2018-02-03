@@ -61,7 +61,7 @@ type Transaction struct {
 	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
 	from atomic.Value // sarda : seems to be the place where we add our counter field. look at EncodeRLP function, there tx.data is used for encoding.
 	// hence the counter field should not be added in txdata
-	nc uint16
+	nc uint16 `json:"nc"    gencodec:"required"`
 }
 
 type txdata struct {
@@ -79,6 +79,7 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+	nc   uint16       `json:"nc"    gencodec:"required"`
 }
 
 type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.
@@ -185,6 +186,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
 	data.Hash = &hash
+	data.nc = tx.nc
 	return data.MarshalJSON()
 }
 
@@ -214,6 +216,7 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
+func (tx *Transaction) NC() uint16         { return tx.nc }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -232,10 +235,19 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	tx_for_hash :=  Transaction_For_Hash{data: tx.data, hash: tx.hash, from: tx.from, size: tx.size}
-	v1 := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
-  v := rlpHash(tx_for_hash)
-  fmt.Println("Hash function output :::::: %v, %v", v1, v)
+	//tx_for_hash :=  Transaction_For_Hash{data: tx.data, hash: tx.hash, from: tx.from, size: tx.size}
+	// v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
+	v := rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+	})
+	//v := rlpHash(tx_for_hash)
+	//fmt.Println("ye do transactions hai :::: " + tx_for_hash.Stringx() + tx.String())
+	//fmt.Println("Hash function output :::::: %x, %x", v1, v)
 	tx.hash.Store(v)
 	return v
 }
@@ -331,7 +343,7 @@ func (tx *Transaction) String() string {
 	Hex:      %x
 	NC:       %v
 `,
-		tx.Hash(),
+		tx.hash,
 		tx.data.Recipient == nil,
 		from,
 		to,
