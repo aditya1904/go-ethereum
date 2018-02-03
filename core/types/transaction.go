@@ -23,6 +23,7 @@ import (
 	"io"
 	"math/big"
 	"sync/atomic"
+	// "os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -232,8 +233,9 @@ func (tx *Transaction) Hash() common.Hash {
 		return hash.(common.Hash)
 	}
 	tx_for_hash :=  Transaction_For_Hash{data: tx.data, hash: tx.hash, from: tx.from, size: tx.size}
-	//v := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
-  	v := rlpHash(tx_for_hash)
+	v1 := rlpHash(tx) // initially, calculates keccak256 hash then perform RLP encoding on that hash
+  v := rlpHash(tx_for_hash)
+  fmt.Println("Hash function output :::::: %v, %v", v1, v)
 	tx.hash.Store(v)
 	return v
 }
@@ -327,7 +329,7 @@ func (tx *Transaction) String() string {
 	R:        %#x
 	S:        %#x
 	Hex:      %x
-	NC:       %#v
+	NC:       %v
 `,
 		tx.Hash(),
 		tx.data.Recipient == nil,
@@ -342,7 +344,7 @@ func (tx *Transaction) String() string {
 		tx.data.R,
 		tx.data.S,
 		enc,
-		nc,
+		tx.nc,
 	)
 }
 
