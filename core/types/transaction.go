@@ -61,7 +61,7 @@ type Transaction struct {
 	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
 	from atomic.Value // sarda : seems to be the place where we add our counter field. look at EncodeRLP function, there tx.data is used for encoding.
 	// hence the counter field should not be added in txdata
-	nc uint16 `json:"nc"    gencodec:"required"`
+	nc uint64
 }
 
 type txdata struct {
@@ -79,7 +79,7 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
-	nc   uint16       `json:"nc"    gencodec:"required"`
+	nc uint64       `json:"nc"    gencodec:"required"`
 }
 
 type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.
@@ -216,7 +216,7 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
-func (tx *Transaction) NC() uint16         { return tx.nc }
+func (tx *Transaction) NC() uint64         { return tx.nc }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
