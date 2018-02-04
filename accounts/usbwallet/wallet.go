@@ -538,7 +538,8 @@ func (w *wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 	}()
 	// Sign the transaction and verify the sender to avoid hardware fault surprises
 	sender, signed, err := w.driver.SignTx(path, tx, chainID)
-	if err != nil {
+ // reinstate value again if possible
+ 	if err != nil {
 		return nil, err
 	}
 	if sender != account.Address {

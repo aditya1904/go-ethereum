@@ -209,6 +209,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.txCh = make(chan core.TxPreEvent, txChanSize)
 	pm.txSub = pm.txpool.SubscribeTxPreEvent(pm.txCh)
 	go pm.txBroadcastLoop()
+	fmt.Println("In start")
 
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -712,6 +713,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
 	peers := pm.peers.PeersWithoutTx(hash)
+	fmt.Println("HI. in BroadcastTx. the node count is:: ", tx.NC())
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
 		peer.SendTransactions(types.Transactions{tx})

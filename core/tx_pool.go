@@ -558,6 +558,8 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+
+	fmt.Println("IN validateTx, the nc value here is :::: ", tx.NC())
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
@@ -610,6 +612,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// If the transaction is already known, discard it
+	fmt.Println("Adding to transaction pool :: nc is ", tx.NC())
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
@@ -758,6 +761,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
+	fmt.Println("in AddLocal function ::: ", tx.NC())
 	return pool.addTx(tx, !pool.config.NoLocals)
 }
 
@@ -784,6 +788,7 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
+	fmt.Println("In function on addTx ::: ", tx.NC())
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 

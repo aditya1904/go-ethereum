@@ -79,7 +79,7 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
-	nc uint64       `json:"nc"    gencodec:"required"`
+	nc   uint64       `json:"nc"    gencodec:"required"`
 }
 
 type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.
@@ -95,7 +95,9 @@ type txdataMarshaling struct { //this stuct used to convert struct in this form 
 
 //Wrapper functions
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
+	tx := newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
+	fmt.Println("I have set nc to ",tx.nc, tx.NC())
+	return tx
 }
 
 func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
@@ -125,7 +127,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		d.Price.Set(gasPrice)
 	}
 
-	return &Transaction{data: d, nc: 3}
+	return &Transaction{data: d, nc: uint64(3)}
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
@@ -151,11 +153,17 @@ func (tx *Transaction) CheckNodeCount() bool {
 
 func (tx *Transaction) DecrementNodeCount() bool {
 	if tx.nc <= 0 {
+		fmt.Println("HI I am decrementing the tx. I am returning false bitchessss")
 		return false
 	}
+	fmt.Println("HI I am decrementing the tx.")
 	tx.nc -= 1
 	return true
 }
+/*
+func (tx *Transaction) SetNC(uint64 p) {
+	tx.nc = p
+}*/
 
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
@@ -216,7 +224,10 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
-func (tx *Transaction) NC() uint64         { return tx.nc }
+func (tx *Transaction) NC() uint64 {
+  fmt.Println("BABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB")
+	return tx.nc
+}
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -290,7 +301,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := &Transaction{data: tx.data}
+	cpy := &Transaction{data: tx.data, nc: tx.nc}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 	return cpy, nil
 }
