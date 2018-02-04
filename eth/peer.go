@@ -135,13 +135,13 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 func (p *peer) SendTransactions(txs types.Transactions) error {
 	var temp_tx_list types.Transactions // types.Transactions is []*Transaction
 	for _, tx := range txs {
-		//		if tx.CheckNodeCount() {
-		p.knownTxs.Add(tx.Hash())
-		//tx.DecrementNodeCount()
-		fmt.Println("Sending Transactions in SendTransactionsss bitches. !!!!!!" , tx.NC())
+		if tx.CheckNodeCount() {
+				p.knownTxs.Add(tx.Hash())
+		    tx.DecrementNodeCount()
+				fmt.Println("Sending Transactions in SendTransactionsss bitches. !!!!!!" , tx.NC())
 		//	temp_tx_list.append(tx)
-		temp_tx_list = append(temp_tx_list, tx)
-		//		}
+			  temp_tx_list = append(temp_tx_list, tx)
+		}
 	}
 	return p2p.Send(p.rw, TxMsg, temp_tx_list)
 }

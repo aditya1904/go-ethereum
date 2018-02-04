@@ -61,7 +61,7 @@ type Transaction struct {
 	size atomic.Value // also check https://stackoverflow.com/a/25520241/5394031
 	from atomic.Value // sarda : seems to be the place where we add our counter field. look at EncodeRLP function, there tx.data is used for encoding.
 	// hence the counter field should not be added in txdata
-	nc uint64
+	//nc uint64
 }
 
 type txdata struct {
@@ -91,12 +91,13 @@ type txdataMarshaling struct { //this stuct used to convert struct in this form 
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
+	nc uint64
 }
 
 //Wrapper functions
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
 	tx := newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
-	fmt.Println("I have set nc to ",tx.nc, tx.NC())
+	fmt.Println("I have set nc to ",tx.data.nc, tx.NC())
 	return tx
 }
 
@@ -119,6 +120,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+		nc:						3,
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
@@ -127,7 +129,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		d.Price.Set(gasPrice)
 	}
 
-	return &Transaction{data: d, nc: uint64(3)}
+	return &Transaction{data: d}
 }
 
 // ChainId returns which chain id this transaction was signed for (if at all)
@@ -145,19 +147,19 @@ func (tx *Transaction) Protected() bool {
 // *****
 
 func (tx *Transaction) CheckNodeCount() bool {
-	if tx.nc > 0 {
+	if tx.data.nc > 0 {
 		return true
 	}
 	return false
 }
 
 func (tx *Transaction) DecrementNodeCount() bool {
-	if tx.nc <= 0 {
+	if tx.data.nc <= 0 {
 		fmt.Println("HI I am decrementing the tx. I am returning false bitchessss")
 		return false
 	}
 	fmt.Println("HI I am decrementing the tx.")
-	tx.nc -= 1
+	tx.data.nc -= 1
 	return true
 }
 /*
@@ -194,7 +196,6 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
 	data.Hash = &hash
-	data.nc = tx.nc
 	return data.MarshalJSON()
 }
 
@@ -225,8 +226,8 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 func (tx *Transaction) NC() uint64 {
-  fmt.Println("BABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB")
-	return tx.nc
+  fmt.Println("====================")
+	return tx.data.nc
 }
 
 // To returns the recipient address of the transaction.
@@ -301,7 +302,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := &Transaction{data: tx.data, nc: tx.nc}
+	cpy := &Transaction{data: tx.data}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 	return cpy, nil
 }
@@ -367,7 +368,7 @@ func (tx *Transaction) String() string {
 		tx.data.R,
 		tx.data.S,
 		enc,
-		tx.nc,
+		tx.data.nc,
 	)
 }
 
