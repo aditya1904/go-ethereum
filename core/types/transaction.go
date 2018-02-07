@@ -79,7 +79,7 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
-	nc   uint64       `json:"nc"    gencodec:"required"`
+	Nc   uint64       `json:"nc"    gencodec:"required"`
 }
 
 type txdataMarshaling struct { //this stuct used to convert struct in this form into json object with keys as represented in above txdata struct.
@@ -91,13 +91,13 @@ type txdataMarshaling struct { //this stuct used to convert struct in this form 
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
-	nc uint64
+	Nc 			hexutil.Uint64
 }
 
 //Wrapper functions
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
 	tx := newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
-	fmt.Println("I have set nc to ",tx.data.nc, tx.NC())
+	fmt.Println("I have set nc to ",tx.data.Nc, tx.NC())
 	return tx
 }
 
@@ -120,7 +120,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
-		nc:						3,
+		Nc:						3,
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
@@ -147,25 +147,21 @@ func (tx *Transaction) Protected() bool {
 // *****
 
 func (tx *Transaction) CheckNodeCount() bool {
-	if tx.data.nc > 0 {
+	if tx.data.Nc > 0 {
 		return true
 	}
 	return false
 }
 
 func (tx *Transaction) DecrementNodeCount() bool {
-	if tx.data.nc <= 0 {
+	if tx.data.Nc <= 0 {
 		fmt.Println("HI I am decrementing the tx. I am returning false bitchessss")
 		return false
 	}
 	fmt.Println("HI I am decrementing the tx.")
-	tx.data.nc -= 1
+	tx.data.Nc -= 1
 	return true
 }
-/*
-func (tx *Transaction) SetNC(uint64 p) {
-	tx.nc = p
-}*/
 
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
@@ -227,7 +223,7 @@ func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 func (tx *Transaction) NC() uint64 {
   fmt.Println("====================")
-	return tx.data.nc
+	return tx.data.Nc
 }
 
 // To returns the recipient address of the transaction.
@@ -355,7 +351,7 @@ func (tx *Transaction) String() string {
 	Hex:      %x
 	NC:       %v
 `,
-		tx.hash,
+		tx.Hash(),
 		tx.data.Recipient == nil,
 		from,
 		to,
@@ -368,7 +364,7 @@ func (tx *Transaction) String() string {
 		tx.data.R,
 		tx.data.S,
 		enc,
-		tx.data.nc,
+		tx.data.Nc,
 	)
 }
 

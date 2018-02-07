@@ -25,7 +25,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
-		nc           hexutil.Uint64  `json:"nc" gencodec:"required"`
+		Nc           hexutil.Uint64  `json:"nc" gencodec:"required"`
 	}
 	var enc txdata
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
@@ -38,7 +38,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.R = (*hexutil.Big)(t.R)
 	enc.S = (*hexutil.Big)(t.S)
 	enc.Hash = t.Hash
-	enc.nc = hexutil.Uint64(t.nc)
+	enc.Nc = hexutil.Uint64(t.Nc)
 	return json.Marshal(&enc)
 }
 
@@ -54,7 +54,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
-		nc           *hexutil.Uint64 `json:"nc"    gencodec:"required"`
+		Nc           *hexutil.Uint64 `json:"nc"    gencodec:"required"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -64,10 +64,10 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'nonce' for txdata")
 	}
 	t.AccountNonce = uint64(*dec.AccountNonce)
-	if dec.nc == nil {
+	if dec.Nc == nil {
 		return errors.New("missing required field 'node count' for txdata")
 	}
-	t.nc = uint64(*dec.nc)
+	t.Nc = uint64(*dec.Nc)
 	if dec.Price == nil {
 		return errors.New("missing required field 'gasPrice' for txdata")
 	}
